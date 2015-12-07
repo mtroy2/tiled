@@ -132,3 +132,4 @@ MapObject *MapObject::clone() const
     o->setRotation(mRotation);
     return o;
 }
+

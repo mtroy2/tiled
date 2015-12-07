@@ -59,6 +59,7 @@ ObjectGroup::~ObjectGroup()
 
 void ObjectGroup::addObject(MapObject *object)
 {
+
     mObjects.append(object);
     object->setObjectGroup(this);
     if (mMap && object->id() == 0)
@@ -68,6 +69,7 @@ void ObjectGroup::addObject(MapObject *object)
 void ObjectGroup::insertObject(int index, MapObject *object)
 {
     mObjects.insert(index, object);
+    sort(mObjects);
     object->setObjectGroup(this);
     if (mMap && object->id() == 0)
         object->setId(mMap->takeNextObjectId());
@@ -187,6 +189,227 @@ void ObjectGroup::offsetObjects(const QPointF &offset,
 bool ObjectGroup::canMergeWith(Layer *other) const
 {
     return other->isObjectGroup();
+}
+void ObjectGroup::sort(QList<MapObject *> &list)
+{
+
+    int maxDepth = (int) std::floor( std::log2(list.size()) ) * 2;
+    int end = list.size();
+    QVector<MapObject *> vec = list.toVector();
+    introSort(vec, maxDepth, 0, end);
+    list.clear();
+    list = QList<MapObject *>::fromVector(vec);
+
+}
+void ObjectGroup::introSort(QVector<MapObject *> &vec, int maxDepth, int begin, int end){
+   const int n = vec.size();
+   // base case
+   if (n <= 1)
+   {
+        return;
+   }
+   else if (n == 2)
+   {
+       const QString first = vec[0]->name();
+       const QString  second = vec[1]->name();
+       if(QString::compare(first,second, Qt::CaseInsensitive) >= 0)
+       {
+           MapObject * temp = vec[0];
+           vec[0] = vec[1];
+           vec[1] = temp;
+       }
+
+   }
+   else if( maxDepth == 0 ){
+       heapSort(vec,begin, end);
+   }
+   else
+   {
+       int p = partition(vec, begin, end);
+
+       introSort(vec, maxDepth - 1, begin, p);
+       introSort(vec, maxDepth -1, p + 1, end);
+
+   }
+}
+void ObjectGroup::heapSort(QVector<MapObject *> &vec, int begin, int end)
+{
+
+    heapify(vec,begin, end);
+    int last = end - 1;
+    while (last > 0)
+    {
+        MapObject * temp = vec[begin];
+        vec[begin] = vec[last];
+        vec[last] = temp;
+        end--;
+        siftDown(vec, begin,end);
+    }
+}
+void ObjectGroup::heapify(QVector<MapObject *> &vec, int begin, int end)
+{
+    int start =  begin + std::floor( (end - 2) / 2 );
+    while (start >= begin)
+    {
+        siftDown(vec,begin,end - 1);
+        start--;
+    }
+}
+void ObjectGroup::siftDown(QVector<MapObject *> &vec, int siftBegin, int siftEnd)
+{
+    int root = siftBegin;
+    while ( (root*2 + 1) <= siftEnd)
+    {
+        int child = root*2 + 1;
+        int swap = root;
+        if (vec[swap] < vec[child])
+        {
+            swap = child;
+        }
+        else if ( child+1 <= siftEnd && vec[swap] < vec[child+1])
+        {
+             swap = child + 1;
+        }
+        else if (swap == root)
+        {
+            return;
+        }
+        else
+        {
+            MapObject *temp = vec[root];
+            vec[root] = vec[swap];
+            vec[swap] = temp;
+            root = swap;
+        }
+    }
+}
+
+int ObjectGroup::partition(QVector<MapObject *> &vec, int begin, int end)
+{
+    MapObject *first = vec[begin];
+    MapObject *last = vec[end - 1];
+    MapObject *middle = vec[ begin + ((end-begin) / 2) ];
+    const QString start = first->name();
+    const QString midway = middle->name();
+    const QString finish = last->name();
+    // start > finish
+    if (QString::compare(start, finish, Qt::CaseInsensitive) >= 0)
+    {
+        // start > finish & start > midway
+        if (QString::compare(start, midway, Qt::CaseInsensitive) >= 0)
+        {
+            // start > finish & start > midway & midway > finish
+            // midway is the median (Order is : Finish, Midway, Start)
+            if (QString::compare(midway, finish, Qt::CaseInsensitive) >= 0)
+            {
+                MapObject * temp = first;
+                vec[0] = last;
+                vec[vec.size()-1] = temp;
+                return reorder(vec, middle,begin,end);
+
+            }
+            // else finish is median
+            //(Order is : Midway, Finish, Start)
+            else
+            {
+                MapObject * temp1 = first;
+                MapObject * temp2 = middle;
+                vec[0] = temp2;
+                vec[begin + ((end-begin) / 2)] = last;
+                vec[vec.size()-1] = temp1;
+                return reorder(vec,last,begin,end);
+
+            }
+        }
+        // start is midpoint
+        // (Order is : Finish, start, midway)
+        else
+        {
+            MapObject * temp1 = first;
+            MapObject * temp2 = middle;
+            vec[0] = last;
+            vec[begin + ((end-begin) / 2)] = temp1;
+            vec[vec.size()-1] = temp2;
+            return reorder(vec, first,begin,end);
+
+        }
+    }
+    // start < finish
+    else
+    {
+        // Start < Finish & Start < Midway
+        if (QString::compare(start, midway, Qt::CaseInsensitive) <= 0)
+        {
+            // Start < Finish & Start < Midway & Midway > Finish
+            // Order is ( Start, Finish, Midway)
+            if (QString::compare(midway, finish, Qt::CaseInsensitive) >= 0)
+            {
+                MapObject * temp1 = middle;
+                vec[begin + ((end-begin) / 2)] = last;
+                vec[vec.size()-1] = temp1;
+                return reorder(vec, last,begin,end);
+
+            }
+            // else Midway is median
+            // Order is ( Start, Midway, Finish)
+            else
+            {
+                return reorder(vec, middle,begin,end);
+            }
+        }
+        // Start < Finish & Start >  Midway
+        // start is median
+        // order is ( Midway, Start, Finish )
+        else
+        {
+            MapObject * temp1 = first;
+            vec[0] = middle;
+            vec[begin + ((end-begin) / 2)] = temp1;
+            return reorder(vec, first,begin,end);
+
+        }
+    }
+}
+int ObjectGroup::reorder(QVector<MapObject *> &vec, MapObject *pivot, int begin, int end)
+{
+    int pivotLocation = begin;
+    const QString checkString = pivot->name();
+    QVector<MapObject *> newVec;
+    newVec.append(pivot);
+    for (int i = begin; i < end; i++)
+    {
+        if ( vec[i]->equals(pivot))
+        {
+            vec.remove(i);
+            end--;
+            break;
+        }
+    }
+
+    for (int i = 0; i < begin; i++)
+    {
+        newVec.push_front(vec[i]);
+    }
+    for (int i = begin; i < end; i++){
+       const QString readStr = vec[i]->name();
+       if (QString::compare(checkString, readStr, Qt::CaseInsensitive ) >= 0 )
+       {
+           pivotLocation++;
+           newVec.insert(begin,vec[i]);
+       }
+       else
+       {
+           newVec.append(vec[i]);
+       }
+    }
+    for (int i = end; i < vec.size(); i++)
+    {
+        newVec.append(vec[i]);
+    }
+    vec.clear();
+    vec = newVec;
+    return pivotLocation;
+
 }
 
 Layer *ObjectGroup::mergedWith(Layer *other) const

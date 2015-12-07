@@ -95,7 +95,7 @@ public:
     /**
      * Sets the name of this object.
      */
-    void setName(const QString &name) { mName = name; }
+    void setName(const QString &name) { mName = name ; }
 
     /**
      * Returns the type of this object. The type usually says something about
@@ -256,6 +256,15 @@ public:
      * ownership of this newly created object.
      */
     MapObject *clone() const;
+    /**
+     * returns mId
+     */
+    int getmId() { return mId; }
+    /**
+     * Returns true if other mapObject is a copy of current object
+     * Assumes that no two map objects can have same id
+     */
+    bool equals(MapObject * other){ return mId == other->getmId(); }
 
 private:
     int mId;

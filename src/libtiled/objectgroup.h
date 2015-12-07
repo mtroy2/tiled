@@ -27,7 +27,7 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-
+//hello
 #ifndef OBJECTGROUP_H
 #define OBJECTGROUP_H
 
@@ -186,6 +186,23 @@ private:
     QList<MapObject*> mObjects;
     QColor mColor;
     DrawOrder mDrawOrder;
+    /**
+     * Called to sort the Object List using introspective sorting algorithm
+     * Uses heapSort and QuickSort
+     */
+    void sort(QList<MapObject*> &list);
+    void introSort(QVector<MapObject *> &vec, int maxSize, int begin, int end);
+    void heapSort(QVector<MapObject *> &vec, int begin, int end);
+    void heapify(QVector<MapObject *> &vec,int begin, int end);
+    void siftDown(QVector<MapObject *> &vec, int siftBegin, int siftEnd);
+    /**
+     * Uses mean of three partitioning
+     * @param stdList
+     * @param begin
+     * @param end
+     */
+    int partition(QVector<MapObject *> &vec, int begin, int end);
+    int reorder(QVector<MapObject *> &vec, MapObject *pivot, int begin, int end);
 };
 
 
